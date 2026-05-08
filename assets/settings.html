@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>oneko desktop</title>
+  <style>
+    :root{
+      --bg:#f5f5f4;
+      --surface:#fafaf9;
+      --surface-2:#ffffff;
+      --line:#d6d3d1;
+      --line-strong:#a8a29e;
+      --text:#1c1917;
+      --muted:#57534e;
+      --accent:#0891b2;
+      --accent-soft:#cffafe;
+      --danger:#b91c1c;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font:14px/1.45 "SF Pro Text","Segoe UI Variable Text","Segoe UI",sans-serif;
+      color:var(--text);
+      background:var(--bg);
+    }
+    .app{
+      display:grid;
+      grid-template-columns:248px 1fr;
+      min-height:100vh;
+    }
+    .sidebar{
+      background:var(--surface);
+      border-right:1px solid var(--line);
+      padding:18px 16px 16px;
+    }
+    .brand{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:18px;
+    }
+    .brand strong{font-size:15px;font-weight:650}
+    .sidebar-actions{
+      display:flex;
+      gap:8px;
+      margin-bottom:14px;
+    }
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .cat-row{
+      width:100%;
+      border:1px solid transparent;
+      background:transparent;
+      color:inherit;
+      text-align:left;
+      padding:9px 10px;
+      border-radius:8px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:pointer;
+    }
+    .cat-row:hover{background:#f0fdfa}
+    .cat-row[data-active="true"]{
+      background:var(--surface-2);
+      border-color:var(--line);
+    }
+    .shell{
+      padding:24px 28px 32px;
+    }
+    .toolbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:20px;
+    }
+    .toolbar strong{font-size:18px;font-weight:650}
+    .toolbar span{color:var(--muted)}
+    .layout{
+      display:grid;
+      grid-template-columns:minmax(320px,420px) minmax(320px,560px);
+      gap:20px;
+      align-items:start;
+    }
+    .panel{
+      background:var(--surface-2);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:18px;
+    }
+    .panel + .panel{margin-top:16px}
+    .panel-title{
+      font-size:13px;
+      font-weight:700;
+      margin:0 0 14px;
+      color:var(--muted);
+    }
+    .preview{
+      display:grid;
+      place-items:center;
+      min-height:180px;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,.04) 1px, transparent 1px) 0 0 / 24px 24px,
+        linear-gradient(rgba(0,0,0,.04) 1px, transparent 1px) 0 0 / 24px 24px,
+        #fcfcfb;
+      border:1px solid var(--line);
+      border-radius:8px;
+    }
+    .preview img{
+      width:128px;
+      image-rendering:pixelated;
+      filter:drop-shadow(0 1px 0 rgba(0,0,0,.08));
+    }
+    .grid{
+      display:grid;
+      gap:14px;
+    }
+    .field{
+      display:grid;
+      gap:7px;
+    }
+    label{font-weight:600}
+    input[type="color"]{
+      width:54px;
+      height:36px;
+      padding:2px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:#fff;
+    }
+    input[type="text"]{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:#fff;
+      padding:9px 10px;
+      font:inherit;
+      color:inherit;
+    }
+    input[type="range"]{width:100%}
+    .inline{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .value{
+      min-width:54px;
+      text-align:right;
+      color:var(--muted);
+      font-variant-numeric:tabular-nums;
+    }
+    .controls{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    button{
+      border:1px solid var(--line-strong);
+      background:#fff;
+      color:var(--text);
+      padding:8px 12px;
+      border-radius:8px;
+      font:inherit;
+      cursor:pointer;
+    }
+    button:hover{background:#f5f5f5}
+    button[data-kind="primary"]{
+      background:#1f2937;
+      border-color:#1f2937;
+      color:#fff;
+    }
+    button[data-kind="danger"]{
+      color:var(--danger);
+      border-color:#f1b8b8;
+      background:#fff7f7;
+    }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 0;
+    }
+    .hint{
+      color:var(--muted);
+      font-size:13px;
+    }
+    .status{
+      color:var(--muted);
+      font-size:13px;
+    }
+    @media (max-width:900px){
+      .app{grid-template-columns:1fr}
+      .sidebar{border-right:none;border-bottom:1px solid var(--line)}
+      .layout{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <strong>oneko desktop</strong>
+        <span class="status" id="saveStatus">Saved</span>
+      </div>
+      <div class="sidebar-actions">
+        <button id="addCat">Add</button>
+        <button id="removeCat">Remove</button>
+      </div>
+      <div class="list" id="catList"></div>
+    </aside>
+    <main class="shell">
+      <div class="toolbar">
+        <div>
+          <strong id="title">Cat 1</strong>
+          <span id="subtitle">Per-cat appearance and global behavior.</span>
+        </div>
+        <div class="controls">
+          <button id="saveNow" data-kind="primary">Save</button>
+        </div>
+      </div>
+      <div class="layout">
+        <section>
+          <div class="panel">
+            <div class="panel-title">Preview</div>
+            <div class="preview">
+              <img id="preview" src="/oneko.png" alt="cat preview">
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Global</div>
+            <label class="toggle">
+              <input type="checkbox" id="scratchPush">
+              <span>Scratch push when a cat reaches the cursor</span>
+            </label>
+            <div class="hint">When the cursor stays pinned, cats will still orbit and may play with each other nearby.</div>
+          </div>
+        </section>
+        <section>
+          <div class="panel">
+            <div class="panel-title">Appearance</div>
+            <div class="grid">
+              <div class="field">
+                <label for="bodyColor">Body</label>
+                <div class="inline">
+                  <input type="color" id="bodyColor">
+                  <span class="hint" id="bodyHex"></span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="outlineColor">Outline</label>
+                <div class="inline">
+                  <input type="color" id="outlineColor">
+                  <span class="hint" id="outlineHex"></span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="opacity">Opacity</label>
+                <div class="inline">
+                  <input type="range" id="opacity" min="32" max="255" step="1">
+                  <span class="value" id="opacityValue"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Lobby</div>
+            <div class="grid">
+              <div class="field">
+                <label for="displayName">Display name</label>
+                <input id="displayName" type="text" spellcheck="false">
+              </div>
+              <div class="field">
+                <label for="endpoint">Endpoint</label>
+                <input id="endpoint" type="text" spellcheck="false">
+              </div>
+              <div class="field">
+                <label for="roomCode">Room code</label>
+                <input id="roomCode" type="text" inputmode="numeric" maxlength="6" spellcheck="false">
+              </div>
+              <div class="controls">
+                <button id="createRoom">Create Room</button>
+                <button id="joinRoom">Join Room</button>
+                <button id="leaveRoom" data-kind="danger">Leave</button>
+              </div>
+              <div class="hint" id="lobbyStatus"></div>
+              <div class="field">
+                <label>Peers</label>
+                <div class="list" id="peerList"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    let state = null;
+    let ui = null;
+    let selected = 0;
+    let saveTimer = null;
+    const $ = id => document.getElementById(id);
+
+    function hex(num) {
+      return "#" + num.toString(16).padStart(6, "0");
+    }
+
+    function previewFilter(cat) {
+      const alpha = Math.max(0.15, cat.opacity / 255);
+      return `drop-shadow(0 0 0 ${hex(cat.outline)}) opacity(${alpha})`;
+    }
+
+    function renderList() {
+      $("catList").innerHTML = "";
+      state.cats.forEach((cat, i) => {
+        const row = document.createElement("button");
+        row.className = "cat-row";
+        row.dataset.active = String(i === selected);
+        row.innerHTML = `<span>Cat ${i + 1}</span><span class="hint">${Math.round(cat.opacity / 255 * 100)}%</span>`;
+        row.onclick = () => { selected = i; render(); };
+        $("catList").appendChild(row);
+      });
+    }
+
+    function renderPeers() {
+      const peers = ui?.lobby?.peers || [];
+      $("peerList").innerHTML = "";
+      if (!peers.length) {
+        $("peerList").innerHTML = `<div class="hint">No other cats connected.</div>`;
+        return;
+      }
+      peers.forEach(peer => {
+        const row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML = `<span>${peer.display_name}</span><span class="hint">${peer.cats.length} cat${peer.cats.length === 1 ? "" : "s"}</span>`;
+        $("peerList").appendChild(row);
+      });
+    }
+
+    function render() {
+      const cat = state.cats[selected];
+      $("title").textContent = `Cat ${selected + 1}`;
+      $("scratchPush").checked = state.scratch_push;
+      $("bodyColor").value = hex(cat.body);
+      $("outlineColor").value = hex(cat.outline);
+      $("opacity").value = cat.opacity;
+      $("opacityValue").textContent = `${Math.round(cat.opacity / 255 * 100)}%`;
+      $("bodyHex").textContent = hex(cat.body);
+      $("outlineHex").textContent = hex(cat.outline);
+      $("preview").style.opacity = String(cat.opacity / 255);
+      $("preview").style.filter = `drop-shadow(0 0 0 ${hex(cat.outline)})`;
+      $("displayName").value = state.lobby.display_name;
+      $("endpoint").value = state.lobby.endpoint;
+      $("roomCode").value = state.lobby.room_code;
+      $("lobbyStatus").textContent = ui?.lobby?.status || "Disconnected";
+      renderList();
+      renderPeers();
+    }
+
+    async function load() {
+      ui = await fetch("/api/state").then(r => r.json());
+      state = structuredClone(ui.config);
+      selected = Math.min(selected, state.cats.length - 1);
+      render();
+    }
+
+    async function save(immediate = false) {
+      $("saveStatus").textContent = "Saving";
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(state)
+      });
+      $("saveStatus").textContent = "Saved";
+    }
+
+    function queueSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => save(), 120);
+    }
+
+    async function lobbyPost(path) {
+      await fetch(path, { method: "POST" });
+      await load();
+    }
+
+    $("scratchPush").oninput = e => { state.scratch_push = e.target.checked; queueSave(); };
+    $("bodyColor").oninput = e => {
+      state.cats[selected].body = parseInt(e.target.value.slice(1), 16);
+      render(); queueSave();
+    };
+    $("outlineColor").oninput = e => {
+      state.cats[selected].outline = parseInt(e.target.value.slice(1), 16);
+      render(); queueSave();
+    };
+    $("opacity").oninput = e => {
+      state.cats[selected].opacity = Number(e.target.value);
+      render(); queueSave();
+    };
+    $("displayName").oninput = e => { state.lobby.display_name = e.target.value; queueSave(); };
+    $("endpoint").oninput = e => { state.lobby.endpoint = e.target.value; queueSave(); };
+    $("roomCode").oninput = e => {
+      state.lobby.room_code = e.target.value.replace(/\D+/g, "").slice(0, 6);
+      render();
+      queueSave();
+    };
+    $("addCat").onclick = () => {
+      const base = state.cats[selected] || { body: 0xffffff, outline: 0, opacity: 255 };
+      state.cats.push({ ...base });
+      selected = state.cats.length - 1;
+      render(); queueSave();
+    };
+    $("removeCat").onclick = () => {
+      if (state.cats.length <= 1) return;
+      state.cats.splice(selected, 1);
+      selected = Math.max(0, selected - 1);
+      render(); queueSave();
+    };
+    $("saveNow").onclick = () => save(true);
+    $("createRoom").onclick = async () => { await save(true); await lobbyPost("/api/lobby/create"); };
+    $("joinRoom").onclick = async () => { await save(true); await lobbyPost("/api/lobby/join"); };
+    $("leaveRoom").onclick = async () => { await lobbyPost("/api/lobby/leave"); };
+    setInterval(load, 2000);
+    load();
+  </script>
+</body>
+</html>

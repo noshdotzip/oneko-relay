@@ -1,0 +1,23 @@
+FROM rust:1.95-bookworm AS builder
+WORKDIR /app
+
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+
+RUN cargo build --release --bin oneko-relay
+
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --create-home --uid 10001 oneko
+
+WORKDIR /app
+COPY --from=builder /app/target/release/oneko-relay /usr/local/bin/oneko-relay
+
+USER oneko
+ENV ONEKO_RELAY_BIND=0.0.0.0:8118
+EXPOSE 8118
+
+ENTRYPOINT ["/usr/local/bin/oneko-relay"]

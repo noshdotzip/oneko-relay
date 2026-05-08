@@ -1,0 +1,14 @@
+services:
+  oneko-relay:
+    image: ghcr.io/OWNER/oneko-relay:latest
+    container_name: oneko-relay
+    environment:
+      ONEKO_RELAY_BIND: 0.0.0.0:8118
+    ports:
+      - "8118:8118"
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp

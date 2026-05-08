@@ -1,0 +1,6 @@
+.git
+.gitignore
+target
+assets
+Dockerfile
+compose.override.yaml
