@@ -13,7 +13,7 @@ use std::{
 
 use futures_util::{SinkExt, StreamExt};
 use image::ImageFormat;
-use oneko_desktop::protocol::{CatStyle, ClientMessage, DEFAULT_ENDPOINT, LobbyConfig, PeerSnapshot, ServerMessage};
+use oneko_desktop::protocol::{CatRenderSnapshot, CatStyle, ClientMessage, DEFAULT_ENDPOINT, LobbyConfig, PeerSnapshot, ServerMessage};
 use serde::{Deserialize, Serialize};
 use tiny_http::{Header, Method, Response, Server, StatusCode};
 use tokio::sync::mpsc;
@@ -178,6 +178,12 @@ impl App {
                     cursor_y: self.desktop.normalize_y(self.cursor.pos.1),
                     locked: self.cursor.locked,
                     cats: cfg.cats.clone(),
+                    renders: self.cats.iter().map(|cat| CatRenderSnapshot {
+                        x: self.desktop.normalize_x(cat.state.pos.0),
+                        y: self.desktop.normalize_y(cat.state.pos.1),
+                        sprite_x: cat.state.sprite.0 as u8,
+                        sprite_y: cat.state.sprite.1 as u8,
+                    }).collect(),
                 }));
                 last_net = Instant::now();
             }
@@ -265,12 +271,14 @@ impl App {
         }
         for remote in &mut self.remotes {
             if let Some(peer) = peers.iter().find(|p| p.id == remote.id) {
-                let cursor = (
-                    self.desktop.denormalize_x(peer.cursor_x),
-                    self.desktop.denormalize_y(peer.cursor_y),
-                );
-                for (i, cat) in remote.cats.iter_mut().enumerate() {
-                    cat.advance(cursor, i, peer.cats.len());
+                for (cat, render) in remote.cats.iter_mut().zip(peer.renders.iter()) {
+                    cat.set_snapshot(
+                        (
+                            self.desktop.denormalize_x(render.x),
+                            self.desktop.denormalize_y(render.y),
+                        ),
+                        (render.sprite_x as usize, render.sprite_y as usize),
+                    );
                 }
             }
         }
@@ -353,11 +361,10 @@ struct RemoteCatWindow {
     renderer: Renderer,
     pos: (f32, f32),
     sprite: Sprite,
-    orbit_angle: f32,
 }
 
 impl RemoteCatWindow {
-    fn new(instance: HINSTANCE, seed: u64, index: usize) -> Result<Self, Box<dyn Error>> {
+    fn new(instance: HINSTANCE, _seed: u64, _index: usize) -> Result<Self, Box<dyn Error>> {
         let hwnd = make_window(
             instance,
             CAT,
@@ -370,26 +377,12 @@ impl RemoteCatWindow {
             renderer: Renderer::new(hwnd)?,
             pos: (0.0, 0.0),
             sprite: IDLE[0],
-            orbit_angle: ((seed >> 8) % 360) as f32 / 180.0 * std::f32::consts::PI + index as f32 * 0.35,
         })
     }
 
-    fn advance(&mut self, cursor: (f32, f32), index: usize, total: usize) {
-        let target = orbit_target(cursor, self.orbit_angle, index, total.max(1));
-        if self.pos == (0.0, 0.0) {
-            self.pos = target;
-            self.sprite = IDLE[0];
-            return;
-        }
-        let d = dist(self.pos, target);
-        if d < FOLLOW_STOP {
-            self.sprite = IDLE[0];
-            return;
-        }
-        let (dx, dy, len) = delta(self.pos, target);
-        self.pos.0 -= dx / len.max(1.0) * CAT_SPEED;
-        self.pos.1 -= dy / len.max(1.0) * CAT_SPEED;
-        self.sprite = pick(dir(delta(self.pos, target)), index as u32);
+    fn set_snapshot(&mut self, pos: (f32, f32), sprite: Sprite) {
+        self.pos = pos;
+        self.sprite = sprite;
     }
 }
 
@@ -446,6 +439,7 @@ struct LocalPresence {
     cursor_y: f32,
     locked: bool,
     cats: Vec<CatStyle>,
+    renders: Vec<CatRenderSnapshot>,
 }
 
 enum NetCommand {
@@ -1070,6 +1064,7 @@ fn start_network_thread() -> mpsc::UnboundedSender<NetCommand> {
                                 cursor_y: local.cursor_y,
                                 locked: local.locked,
                                 cats: local.cats,
+                                renders: local.renders,
                             })).await;
                         } else if !local.lobby.room_code.is_empty() && !local.lobby.endpoint.is_empty() {
                             mutate_lobby(|l| {

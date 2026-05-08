@@ -196,7 +196,7 @@ async fn handle(stream: TcpStream, _addr: SocketAddr, state: Arc<Mutex<RelayStat
                     })));
                 }
             }
-            ClientMessage::Presence { cursor_x, cursor_y, locked, cats } => {
+            ClientMessage::Presence { cursor_x, cursor_y, locked, cats, renders } => {
                 if client_id.is_empty() || room_code.is_empty() {
                     let _ = tx.send(ServerMessage::Error { message: "Join a room first".into() });
                     continue;
@@ -206,6 +206,10 @@ async fn handle(stream: TcpStream, _addr: SocketAddr, state: Arc<Mutex<RelayStat
                 }
                 let Some(cats) = sanitize_cats(cats) else {
                     let _ = tx.send(ServerMessage::Error { message: "Invalid cat payload".into() });
+                    continue;
+                };
+                let Some(renders) = sanitize_renders(renders, cats.len()) else {
+                    let _ = tx.send(ServerMessage::Error { message: "Invalid cat render payload".into() });
                     continue;
                 };
                 let Some((cursor_x, cursor_y)) = sanitize_cursor(cursor_x, cursor_y) else {
@@ -220,6 +224,7 @@ async fn handle(stream: TcpStream, _addr: SocketAddr, state: Arc<Mutex<RelayStat
                         peer.cursor_y = cursor_y;
                         peer.locked = locked;
                         peer.cats = cats;
+                        peer.renders = renders;
                     }
                 }
                 drop(guard);
@@ -305,4 +310,18 @@ fn sanitize_cats(cats: Vec<oneko_desktop::protocol::CatStyle>) -> Option<Vec<one
 fn sanitize_cursor(x: f32, y: f32) -> Option<(f32, f32)> {
     let valid = |v: f32| v.is_finite() && (0.0..=1.0).contains(&v);
     (valid(x) && valid(y)).then_some((x, y))
+}
+
+fn sanitize_renders(
+    renders: Vec<oneko_desktop::protocol::CatRenderSnapshot>,
+    cat_count: usize,
+) -> Option<Vec<oneko_desktop::protocol::CatRenderSnapshot>> {
+    if renders.len() != cat_count {
+        return None;
+    }
+    let valid_coord = |v: f32| v.is_finite() && (0.0..=1.0).contains(&v);
+    let valid = renders
+        .iter()
+        .all(|r| valid_coord(r.x) && valid_coord(r.y) && r.sprite_x < 8 && r.sprite_y < 4);
+    valid.then_some(renders)
 }

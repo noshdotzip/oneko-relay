@@ -23,6 +23,14 @@ pub struct LobbyConfig {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct CatRenderSnapshot {
+    pub x: f32,
+    pub y: f32,
+    pub sprite_x: u8,
+    pub sprite_y: u8,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct PeerSnapshot {
     pub id: String,
     pub display_name: String,
@@ -30,6 +38,7 @@ pub struct PeerSnapshot {
     pub cursor_y: f32,
     pub locked: bool,
     pub cats: Vec<CatStyle>,
+    pub renders: Vec<CatRenderSnapshot>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -49,6 +58,7 @@ pub enum ClientMessage {
         cursor_y: f32,
         locked: bool,
         cats: Vec<CatStyle>,
+        renders: Vec<CatRenderSnapshot>,
     },
     Leave,
 }
