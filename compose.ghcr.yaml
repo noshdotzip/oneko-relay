@@ -1,6 +1,6 @@
 services:
   oneko-relay:
-    image: ghcr.io/OWNER/oneko-relay:latest
+    image: ghcr.io/noshdotzip/oneko-relay:latest
     container_name: oneko-relay
     environment:
       ONEKO_RELAY_BIND: 0.0.0.0:8118
