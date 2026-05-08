@@ -177,13 +177,8 @@ impl App {
                     cursor_x: self.desktop.normalize_x(self.cursor.pos.0),
                     cursor_y: self.desktop.normalize_y(self.cursor.pos.1),
                     locked: self.cursor.locked,
-                    cats: cfg.cats.clone(),
-                    renders: self.cats.iter().map(|cat| CatRenderSnapshot {
-                        x: self.desktop.normalize_x(cat.state.pos.0),
-                        y: self.desktop.normalize_y(cat.state.pos.1),
-                        sprite_x: cat.state.sprite.0 as u8,
-                        sprite_y: cat.state.sprite.1 as u8,
-                    }).collect(),
+                    cats: multiplayer_cat(&cfg.cats),
+                    renders: multiplayer_renders(&self.cats, &self.desktop),
                 }));
                 last_net = Instant::now();
             }
@@ -998,6 +993,22 @@ fn default_name() -> String {
         .unwrap_or_else(|| "cat owner".to_string())
 }
 
+fn multiplayer_cat(cats: &[CatStyle]) -> Vec<CatStyle> {
+    cats.first().cloned().into_iter().collect()
+}
+
+fn multiplayer_renders(cats: &[CatWindow], desktop: &DesktopBounds) -> Vec<CatRenderSnapshot> {
+    cats.first()
+        .map(|cat| CatRenderSnapshot {
+            x: desktop.normalize_x(cat.state.pos.0),
+            y: desktop.normalize_y(cat.state.pos.1),
+            sprite_x: cat.state.sprite.0 as u8,
+            sprite_y: cat.state.sprite.1 as u8,
+        })
+        .into_iter()
+        .collect()
+}
+
 fn mutate_config<F: FnOnce(&mut Shared)>(f: F) {
     let mut shared = shared().lock().unwrap();
     f(&mut shared);
@@ -1029,7 +1040,11 @@ fn start_network_thread() -> mpsc::UnboundedSender<NetCommand> {
                             l.peers.clear();
                         });
                         if let Some(ws) = socket.as_mut() {
-                            let _ = ws.send(json_msg(&ClientMessage::CreateRoom { display_name: lobby.display_name.clone(), cats: snapshot_shared().config.cats.clone() })).await;
+                            let cats = multiplayer_cat(&snapshot_shared().config.cats);
+                            let _ = ws.send(json_msg(&ClientMessage::CreateRoom {
+                                display_name: lobby.display_name.clone(),
+                                cats,
+                            })).await;
                         }
                     }
                     NetCommand::Join(lobby) => {
@@ -1041,10 +1056,11 @@ fn start_network_thread() -> mpsc::UnboundedSender<NetCommand> {
                             l.peers.clear();
                         });
                         if let Some(ws) = socket.as_mut() {
+                            let cats = multiplayer_cat(&snapshot_shared().config.cats);
                             let _ = ws.send(json_msg(&ClientMessage::JoinRoom {
                                 room_code: lobby.room_code.clone(),
                                 display_name: lobby.display_name.clone(),
-                                cats: snapshot_shared().config.cats.clone(),
+                                cats,
                             })).await;
                         }
                     }

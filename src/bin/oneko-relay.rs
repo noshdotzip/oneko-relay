@@ -13,7 +13,7 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 
 const MAX_TEXT_BYTES: usize = 4096;
 const MAX_NAME_LEN: usize = 24;
-const MAX_CATS: usize = 8;
+const MAX_CATS: usize = 1;
 const MAX_ROOM_PEERS: usize = 16;
 const PRESENCE_INTERVAL: Duration = Duration::from_millis(16);
 const INVALID_LIMIT: u8 = 4;

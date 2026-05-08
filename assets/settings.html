@@ -6,50 +6,89 @@
   <title>oneko desktop</title>
   <style>
     :root{
-      --bg:#f5f5f4;
-      --surface:#fafaf9;
-      --surface-2:#ffffff;
-      --line:#d6d3d1;
-      --line-strong:#a8a29e;
-      --text:#1c1917;
-      --muted:#57534e;
-      --accent:#0891b2;
-      --accent-soft:#cffafe;
-      --danger:#b91c1c;
+      --bg:#f6f4ef;
+      --surface:#f1eee8;
+      --panel:#fffdf9;
+      --panel-alt:#f8f5ef;
+      --line:#d7d0c4;
+      --line-strong:#b7ae9f;
+      --text:#211d17;
+      --muted:#6c6358;
+      --accent:#5f5a52;
+      --accent-strong:#2a2620;
+      --danger:#8f312b;
+      --danger-soft:#fbefed;
+      --success:#2f5a3a;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
-      font:14px/1.45 "SF Pro Text","Segoe UI Variable Text","Segoe UI",sans-serif;
-      color:var(--text);
       background:var(--bg);
+      color:var(--text);
+      font:14px/1.45 "SF Pro Text","IBM Plex Sans","Noto Sans",sans-serif;
     }
+    button,input{font:inherit}
     .app{
       display:grid;
-      grid-template-columns:248px 1fr;
+      grid-template-columns:252px 1fr;
       min-height:100vh;
     }
     .sidebar{
       background:var(--surface);
       border-right:1px solid var(--line);
-      padding:18px 16px 16px;
+      padding:20px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
     }
     .brand{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      margin-bottom:18px;
+      gap:12px;
     }
-    .brand strong{font-size:15px;font-weight:650}
-    .sidebar-actions{
+    .brand strong{
+      font-size:15px;
+      font-weight:650;
+    }
+    .status{
+      color:var(--muted);
+      font-size:12px;
+    }
+    .sidebar-copy{
+      color:var(--muted);
+      font-size:13px;
+      margin:0;
+    }
+    .sidebar-actions,
+    .controls,
+    .tabbar{
       display:flex;
       gap:8px;
-      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+    .tabbar{
+      margin-bottom:18px;
+      border-bottom:1px solid var(--line);
+      padding-bottom:10px;
+    }
+    .tab{
+      border:none;
+      border-bottom:2px solid transparent;
+      background:transparent;
+      color:var(--muted);
+      padding:6px 2px;
+      border-radius:0;
+    }
+    .tab[data-active="true"]{
+      color:var(--text);
+      border-bottom-color:var(--accent-strong);
     }
     .list{
       display:flex;
       flex-direction:column;
       gap:6px;
+      min-width:0;
     }
     .cat-row{
       width:100%;
@@ -57,74 +96,111 @@
       background:transparent;
       color:inherit;
       text-align:left;
-      padding:9px 10px;
+      padding:10px;
       border-radius:8px;
       display:flex;
       justify-content:space-between;
       align-items:center;
+      gap:12px;
       cursor:pointer;
     }
-    .cat-row:hover{background:#f0fdfa}
+    .cat-row:hover{background:rgba(255,255,255,.45)}
     .cat-row[data-active="true"]{
-      background:var(--surface-2);
+      background:var(--panel);
       border-color:var(--line);
     }
+    .cat-meta{
+      display:grid;
+      gap:2px;
+      min-width:0;
+    }
+    .cat-meta strong{
+      font-size:13px;
+      font-weight:600;
+    }
+    .cat-meta span,
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+    }
     .shell{
-      padding:24px 28px 32px;
+      padding:26px 28px 32px;
+      max-width:1320px;
     }
     .toolbar{
       display:flex;
       justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      margin-bottom:20px;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:18px;
     }
-    .toolbar strong{font-size:18px;font-weight:650}
-    .toolbar span{color:var(--muted)}
-    .layout{
+    .toolbar h1{
+      margin:0 0 4px;
+      font-size:24px;
+      line-height:1.1;
+      font-weight:650;
+    }
+    .toolbar p{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .content{
+      display:none;
+    }
+    .content[data-active="true"]{
+      display:block;
+    }
+    .grid{
       display:grid;
-      grid-template-columns:minmax(320px,420px) minmax(320px,560px);
-      gap:20px;
+      gap:18px;
+    }
+    .grid.local{
+      grid-template-columns:minmax(320px,420px) minmax(360px,560px);
+      align-items:start;
+    }
+    .grid.multi{
+      grid-template-columns:minmax(360px,420px) minmax(420px,1fr);
       align-items:start;
     }
     .panel{
-      background:var(--surface-2);
+      background:var(--panel);
       border:1px solid var(--line);
       border-radius:10px;
       padding:18px;
     }
     .panel + .panel{margin-top:16px}
-    .panel-title{
+    .section-title{
+      margin:0 0 14px;
       font-size:13px;
       font-weight:700;
-      margin:0 0 14px;
       color:var(--muted);
-    }
-    .preview{
-      display:grid;
-      place-items:center;
-      min-height:180px;
-      background:
-        linear-gradient(90deg, rgba(0,0,0,.04) 1px, transparent 1px) 0 0 / 24px 24px,
-        linear-gradient(rgba(0,0,0,.04) 1px, transparent 1px) 0 0 / 24px 24px,
-        #fcfcfb;
-      border:1px solid var(--line);
-      border-radius:8px;
-    }
-    .preview img{
-      width:128px;
-      image-rendering:pixelated;
-      filter:drop-shadow(0 1px 0 rgba(0,0,0,.08));
-    }
-    .grid{
-      display:grid;
-      gap:14px;
     }
     .field{
       display:grid;
       gap:7px;
     }
-    label{font-weight:600}
+    .stack{
+      display:grid;
+      gap:14px;
+    }
+    label{
+      font-weight:600;
+      font-size:13px;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:9px 10px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:#fff;
+      color:inherit;
+    }
+    input[type="text"]:focus{
+      outline:none;
+      border-color:var(--line-strong);
+      box-shadow:0 0 0 3px rgba(42,38,32,.08);
+    }
     input[type="color"]{
       width:54px;
       height:36px;
@@ -133,16 +209,35 @@
       border-radius:8px;
       background:#fff;
     }
-    input[type="text"]{
+    input[type="range"]{
       width:100%;
-      border:1px solid var(--line);
-      border-radius:8px;
-      background:#fff;
-      padding:9px 10px;
-      font:inherit;
-      color:inherit;
+      accent-color:#4f4a42;
     }
-    input[type="range"]{width:100%}
+    button{
+      border:1px solid var(--line-strong);
+      background:#fff;
+      color:var(--text);
+      padding:8px 12px;
+      border-radius:8px;
+      cursor:pointer;
+    }
+    button:hover{background:#f6f3ee}
+    button[data-kind="primary"]{
+      background:var(--accent-strong);
+      color:#fff;
+      border-color:var(--accent-strong);
+    }
+    button[data-kind="danger"]{
+      color:var(--danger);
+      background:var(--danger-soft);
+      border-color:#e7c1bb;
+    }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
     .inline{
       display:flex;
       align-items:center;
@@ -153,56 +248,131 @@
       text-align:right;
       color:var(--muted);
       font-variant-numeric:tabular-nums;
+      font-size:12px;
     }
-    .controls{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    button{
-      border:1px solid var(--line-strong);
-      background:#fff;
-      color:var(--text);
-      padding:8px 12px;
+    .preview-box{
+      min-height:220px;
+      border:1px solid var(--line);
       border-radius:8px;
-      font:inherit;
-      cursor:pointer;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,.035) 1px, transparent 1px) 0 0/24px 24px,
+        linear-gradient(rgba(0,0,0,.035) 1px, transparent 1px) 0 0/24px 24px,
+        #fbfaf7;
+      display:grid;
+      place-items:center;
     }
-    button:hover{background:#f5f5f5}
-    button[data-kind="primary"]{
-      background:#1f2937;
-      border-color:#1f2937;
-      color:#fff;
-    }
-    button[data-kind="danger"]{
-      color:var(--danger);
-      border-color:#f1b8b8;
-      background:#fff7f7;
-    }
-    .row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
+    canvas.preview-canvas{
+      width:160px;
+      height:160px;
+      image-rendering:pixelated;
     }
     .toggle{
       display:flex;
       align-items:center;
       gap:10px;
-      padding:10px 0;
     }
-    .hint{
+    .note{
+      background:var(--panel-alt);
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:11px 12px;
       color:var(--muted);
-      font-size:13px;
+      font-size:12px;
     }
-    .status{
+    .lobby-status{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--panel-alt);
+    }
+    .lobby-status strong{
+      display:block;
+      font-size:13px;
+      font-weight:600;
+    }
+    .lobby-status span{
       color:var(--muted);
-      font-size:13px;
+      font-size:12px;
     }
-    @media (max-width:900px){
+    .player-list{
+      display:grid;
+      gap:8px;
+    }
+    .player-card{
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--panel-alt);
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .player-main{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .player-main canvas{
+      width:32px;
+      height:32px;
+      image-rendering:pixelated;
+      flex:none;
+    }
+    .player-text{
+      display:grid;
+      gap:2px;
+      min-width:0;
+    }
+    .player-text strong{
+      font-size:13px;
+      font-weight:600;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .player-text span{
+      color:var(--muted);
+      font-size:12px;
+    }
+    .badge{
+      border:1px solid var(--line);
+      border-radius:6px;
+      padding:3px 7px;
+      color:var(--muted);
+      font-size:11px;
+      background:#fff;
+      white-space:nowrap;
+    }
+    .empty{
+      border:1px dashed var(--line);
+      border-radius:8px;
+      padding:14px 12px;
+      color:var(--muted);
+      font-size:12px;
+      background:var(--panel-alt);
+    }
+    .split{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width:980px){
       .app{grid-template-columns:1fr}
-      .sidebar{border-right:none;border-bottom:1px solid var(--line)}
-      .layout{grid-template-columns:1fr}
+      .sidebar{
+        border-right:none;
+        border-bottom:1px solid var(--line);
+      }
+      .grid.local,
+      .grid.multi{
+        grid-template-columns:1fr;
+      }
+      .shell{padding:22px 18px 26px}
     }
   </style>
 </head>
@@ -213,6 +383,7 @@
         <strong>oneko desktop</strong>
         <span class="status" id="saveStatus">Saved</span>
       </div>
+      <p class="sidebar-copy">Local cats stay local. Multiplayer always shares Cat 1 only.</p>
       <div class="sidebar-actions">
         <button id="addCat">Add</button>
         <button id="removeCat">Remove</button>
@@ -222,102 +393,210 @@
     <main class="shell">
       <div class="toolbar">
         <div>
-          <strong id="title">Cat 1</strong>
-          <span id="subtitle">Per-cat appearance and global behavior.</span>
+          <h1>Settings</h1>
+          <p>Manage local cats, shared lobby identity, and the single cat other players will see.</p>
         </div>
         <div class="controls">
           <button id="saveNow" data-kind="primary">Save</button>
         </div>
       </div>
-      <div class="layout">
-        <section>
-          <div class="panel">
-            <div class="panel-title">Preview</div>
-            <div class="preview">
-              <img id="preview" src="/oneko.png" alt="cat preview">
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-title">Global</div>
-            <label class="toggle">
-              <input type="checkbox" id="scratchPush">
-              <span>Scratch push when a cat reaches the cursor</span>
-            </label>
-            <div class="hint">When the cursor stays pinned, cats will still orbit and may play with each other nearby.</div>
-          </div>
-        </section>
-        <section>
-          <div class="panel">
-            <div class="panel-title">Appearance</div>
-            <div class="grid">
-              <div class="field">
-                <label for="bodyColor">Body</label>
-                <div class="inline">
-                  <input type="color" id="bodyColor">
-                  <span class="hint" id="bodyHex"></span>
-                </div>
-              </div>
-              <div class="field">
-                <label for="outlineColor">Outline</label>
-                <div class="inline">
-                  <input type="color" id="outlineColor">
-                  <span class="hint" id="outlineHex"></span>
-                </div>
-              </div>
-              <div class="field">
-                <label for="opacity">Opacity</label>
-                <div class="inline">
-                  <input type="range" id="opacity" min="32" max="255" step="1">
-                  <span class="value" id="opacityValue"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-title">Lobby</div>
-            <div class="grid">
-              <div class="field">
-                <label for="displayName">Display name</label>
-                <input id="displayName" type="text" spellcheck="false">
-              </div>
-              <div class="field">
-                <label for="endpoint">Endpoint</label>
-                <input id="endpoint" type="text" spellcheck="false">
-              </div>
-              <div class="field">
-                <label for="roomCode">Room code</label>
-                <input id="roomCode" type="text" inputmode="numeric" maxlength="6" spellcheck="false">
-              </div>
-              <div class="controls">
-                <button id="createRoom">Create Room</button>
-                <button id="joinRoom">Join Room</button>
-                <button id="leaveRoom" data-kind="danger">Leave</button>
-              </div>
-              <div class="hint" id="lobbyStatus"></div>
-              <div class="field">
-                <label>Peers</label>
-                <div class="list" id="peerList"></div>
-              </div>
-            </div>
-          </div>
-        </section>
+
+      <div class="tabbar">
+        <button class="tab" id="tabLocal" data-tab="local" data-active="true">Cats</button>
+        <button class="tab" id="tabMultiplayer" data-tab="multiplayer" data-active="false">Multiplayer</button>
       </div>
+
+      <section class="content" id="contentLocal" data-active="true">
+        <div class="grid local">
+          <div>
+            <div class="panel">
+              <h2 class="section-title" id="catTitle">Cat 1</h2>
+              <div class="preview-box">
+                <canvas id="previewCanvas" class="preview-canvas" width="160" height="160"></canvas>
+              </div>
+            </div>
+            <div class="panel">
+              <h2 class="section-title">Behavior</h2>
+              <div class="stack">
+                <label class="toggle">
+                  <input type="checkbox" id="scratchPush">
+                  <span>Push the cursor while scratching</span>
+                </label>
+                <div class="note">If the cursor stays pinned, cats can still idle, sleep, lap, and chase. Multiplayer peers only see the first cat.</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel">
+              <h2 class="section-title">Appearance</h2>
+              <div class="stack">
+                <div class="field">
+                  <label for="bodyColor">Body</label>
+                  <div class="inline">
+                    <input type="color" id="bodyColor">
+                    <span class="hint" id="bodyHex"></span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="outlineColor">Outline</label>
+                  <div class="inline">
+                    <input type="color" id="outlineColor">
+                    <span class="hint" id="outlineHex"></span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="opacity">Opacity</label>
+                  <div class="inline">
+                    <input type="range" id="opacity" min="32" max="255" step="1">
+                    <span class="value" id="opacityValue"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <h2 class="section-title">Shared Cat</h2>
+              <div class="note">Lobby sessions always publish Cat 1. Extra local cats stay on your machine and are not sent to the relay.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="contentMultiplayer" data-active="false">
+        <div class="grid multi">
+          <div>
+            <div class="panel">
+              <h2 class="section-title">Lobby</h2>
+              <div class="stack">
+                <div class="field">
+                  <label for="displayName">Nickname</label>
+                  <input id="displayName" type="text" spellcheck="false" maxlength="24">
+                </div>
+                <div class="field">
+                  <label for="endpoint">Endpoint</label>
+                  <input id="endpoint" type="text" spellcheck="false">
+                </div>
+                <div class="field">
+                  <label for="roomCode">Room code</label>
+                  <input id="roomCode" type="text" inputmode="numeric" maxlength="6" spellcheck="false">
+                </div>
+                <div class="controls">
+                  <button id="createRoom">Create Room</button>
+                  <button id="joinRoom">Join Room</button>
+                  <button id="leaveRoom" data-kind="danger">Leave</button>
+                </div>
+                <div class="lobby-status">
+                  <div>
+                    <strong id="lobbyStatus">Disconnected</strong>
+                    <span id="roomStatus">No active room</span>
+                  </div>
+                  <span class="badge" id="peerCount">0 players</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h2 class="section-title">Shared Preview</h2>
+              <div class="row" style="margin-bottom:12px">
+                <div>
+                  <strong style="font-size:13px;font-weight:600">Cat 1</strong>
+                  <div class="hint">This is the only cat sent to other players.</div>
+                </div>
+                <canvas id="sharedCanvas" width="32" height="32"></canvas>
+              </div>
+              <div class="note">Nicknames are shown only in the player list. Nothing is rendered over the cats on-screen.</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel">
+              <h2 class="section-title">Players</h2>
+              <div class="player-list" id="playerList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
+
   <script>
     let state = null;
     let ui = null;
     let selected = 0;
     let saveTimer = null;
+    let activeTab = "local";
+    let spriteSheet = null;
+
     const $ = id => document.getElementById(id);
+    const IDLE_SPRITE = [3, 3];
 
     function hex(num) {
       return "#" + num.toString(16).padStart(6, "0");
     }
 
-    function previewFilter(cat) {
-      const alpha = Math.max(0.15, cat.opacity / 255);
-      return `drop-shadow(0 0 0 ${hex(cat.outline)}) opacity(${alpha})`;
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function unpack(rgb) {
+      return [(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255];
+    }
+
+    function mix(a, b, t) {
+      return [
+        Math.round((a[0] * (255 - t) + b[0] * t) / 255),
+        Math.round((a[1] * (255 - t) + b[1] * t) / 255),
+        Math.round((a[2] * (255 - t) + b[2] * t) / 255)
+      ];
+    }
+
+    async function ensureSpriteSheet() {
+      if (spriteSheet) return spriteSheet;
+      spriteSheet = new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = "/oneko.png";
+      });
+      return spriteSheet;
+    }
+
+    async function renderSprite(canvas, cat, sprite = IDLE_SPRITE, scale = 1) {
+      const img = await ensureSpriteSheet();
+      const scratch = document.createElement("canvas");
+      scratch.width = 32;
+      scratch.height = 32;
+      const sctx = scratch.getContext("2d", { willReadFrequently: true });
+      sctx.drawImage(img, sprite[0] * 32, sprite[1] * 32, 32, 32, 0, 0, 32, 32);
+      const imageData = sctx.getImageData(0, 0, 32, 32);
+      const body = unpack(cat.body);
+      const outline = unpack(cat.outline);
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const alpha = Math.round(imageData.data[i + 3] * (cat.opacity / 255));
+        const gray = imageData.data[i];
+        const rgb = mix(outline, body, gray);
+        imageData.data[i] = rgb[0];
+        imageData.data[i + 1] = rgb[1];
+        imageData.data[i + 2] = rgb[2];
+        imageData.data[i + 3] = alpha;
+      }
+      sctx.putImageData(imageData, 0, 0);
+
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      const size = 32 * scale;
+      const x = Math.floor((canvas.width - size) / 2);
+      const y = Math.floor((canvas.height - size) / 2);
+      ctx.drawImage(scratch, 0, 0, 32, 32, x, y, size, size);
+    }
+
+    function setTab(tab) {
+      activeTab = tab;
+      $("tabLocal").dataset.active = String(tab === "local");
+      $("tabMultiplayer").dataset.active = String(tab === "multiplayer");
+      $("contentLocal").dataset.active = String(tab === "local");
+      $("contentMultiplayer").dataset.active = String(tab === "multiplayer");
     }
 
     function renderList() {
@@ -326,30 +605,86 @@
         const row = document.createElement("button");
         row.className = "cat-row";
         row.dataset.active = String(i === selected);
-        row.innerHTML = `<span>Cat ${i + 1}</span><span class="hint">${Math.round(cat.opacity / 255 * 100)}%</span>`;
-        row.onclick = () => { selected = i; render(); };
+        row.innerHTML = `
+          <div class="cat-meta">
+            <strong>Cat ${i + 1}</strong>
+            <span>${i === 0 ? "Shared in multiplayer" : "Local only"}</span>
+          </div>
+          <span class="hint">${Math.round(cat.opacity / 255 * 100)}%</span>
+        `;
+        row.onclick = () => {
+          selected = i;
+          render();
+        };
         $("catList").appendChild(row);
       });
     }
 
-    function renderPeers() {
+    async function renderPlayers() {
+      const list = $("playerList");
+      list.innerHTML = "";
+      const localCat = state.cats[0];
+      if (localCat) {
+        const local = document.createElement("div");
+        local.className = "player-card";
+        local.innerHTML = `
+          <div class="player-main">
+            <canvas width="32" height="32"></canvas>
+            <div class="player-text">
+              <strong>${state.lobby.display_name || "You"}</strong>
+              <span>You</span>
+            </div>
+          </div>
+          <span class="badge">${ui?.lobby?.connected ? "connected" : "local"}</span>
+        `;
+        list.appendChild(local);
+        await renderSprite(local.querySelector("canvas"), localCat, IDLE_SPRITE, 1);
+      }
+
       const peers = ui?.lobby?.peers || [];
-      $("peerList").innerHTML = "";
       if (!peers.length) {
-        $("peerList").innerHTML = `<div class="hint">No other cats connected.</div>`;
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = ui?.lobby?.connected
+          ? "No other players are in this room yet."
+          : "Join or create a room to see other players here.";
+        list.appendChild(empty);
         return;
       }
-      peers.forEach(peer => {
+
+      for (const peer of peers) {
+        const cat = peer.cats[0] || { body: 0xffffff, outline: 0x000000, opacity: 255 };
         const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `<span>${peer.display_name}</span><span class="hint">${peer.cats.length} cat${peer.cats.length === 1 ? "" : "s"}</span>`;
-        $("peerList").appendChild(row);
-      });
+        row.className = "player-card";
+        row.innerHTML = `
+          <div class="player-main">
+            <canvas width="32" height="32"></canvas>
+            <div class="player-text">
+              <strong>${peer.display_name}</strong>
+              <span>${peer.locked ? "idle / locked cursor" : "active"}</span>
+            </div>
+          </div>
+          <span class="badge">1 cat</span>
+        `;
+        list.appendChild(row);
+        const sprite = peer.renders?.[0] ? [peer.renders[0].sprite_x, peer.renders[0].sprite_y] : IDLE_SPRITE;
+        await renderSprite(row.querySelector("canvas"), cat, sprite, 1);
+      }
     }
 
-    function render() {
+    async function renderPreview() {
       const cat = state.cats[selected];
-      $("title").textContent = `Cat ${selected + 1}`;
+      if (!cat) return;
+      $("catTitle").textContent = `Cat ${selected + 1}`;
+      await renderSprite($("previewCanvas"), cat, IDLE_SPRITE, 5);
+      if (state.cats[0]) {
+        await renderSprite($("sharedCanvas"), state.cats[0], IDLE_SPRITE, 1);
+      }
+    }
+
+    async function render() {
+      const cat = state.cats[selected];
+      if (!cat) return;
       $("scratchPush").checked = state.scratch_push;
       $("bodyColor").value = hex(cat.body);
       $("outlineColor").value = hex(cat.outline);
@@ -357,24 +692,28 @@
       $("opacityValue").textContent = `${Math.round(cat.opacity / 255 * 100)}%`;
       $("bodyHex").textContent = hex(cat.body);
       $("outlineHex").textContent = hex(cat.outline);
-      $("preview").style.opacity = String(cat.opacity / 255);
-      $("preview").style.filter = `drop-shadow(0 0 0 ${hex(cat.outline)})`;
       $("displayName").value = state.lobby.display_name;
       $("endpoint").value = state.lobby.endpoint;
       $("roomCode").value = state.lobby.room_code;
       $("lobbyStatus").textContent = ui?.lobby?.status || "Disconnected";
+      $("roomStatus").textContent = state.lobby.room_code
+        ? `Room ${state.lobby.room_code}`
+        : "No active room";
+      const count = 1 + (ui?.lobby?.peers?.length || 0);
+      $("peerCount").textContent = `${count} player${count === 1 ? "" : "s"}`;
       renderList();
-      renderPeers();
+      await renderPreview();
+      await renderPlayers();
     }
 
     async function load() {
       ui = await fetch("/api/state").then(r => r.json());
       state = structuredClone(ui.config);
-      selected = Math.min(selected, state.cats.length - 1);
-      render();
+      selected = clamp(selected, 0, Math.max(0, state.cats.length - 1));
+      await render();
     }
 
-    async function save(immediate = false) {
+    async function save() {
       $("saveStatus").textContent = "Saving";
       await fetch("/api/config", {
         method: "POST",
@@ -394,42 +733,68 @@
       await load();
     }
 
-    $("scratchPush").oninput = e => { state.scratch_push = e.target.checked; queueSave(); };
-    $("bodyColor").oninput = e => {
-      state.cats[selected].body = parseInt(e.target.value.slice(1), 16);
-      render(); queueSave();
-    };
-    $("outlineColor").oninput = e => {
-      state.cats[selected].outline = parseInt(e.target.value.slice(1), 16);
-      render(); queueSave();
-    };
-    $("opacity").oninput = e => {
-      state.cats[selected].opacity = Number(e.target.value);
-      render(); queueSave();
-    };
-    $("displayName").oninput = e => { state.lobby.display_name = e.target.value; queueSave(); };
-    $("endpoint").oninput = e => { state.lobby.endpoint = e.target.value; queueSave(); };
-    $("roomCode").oninput = e => {
-      state.lobby.room_code = e.target.value.replace(/\D+/g, "").slice(0, 6);
-      render();
+    $("tabLocal").onclick = () => setTab("local");
+    $("tabMultiplayer").onclick = () => setTab("multiplayer");
+
+    $("scratchPush").oninput = e => {
+      state.scratch_push = e.target.checked;
       queueSave();
     };
-    $("addCat").onclick = () => {
+    $("bodyColor").oninput = async e => {
+      state.cats[selected].body = parseInt(e.target.value.slice(1), 16);
+      await render();
+      queueSave();
+    };
+    $("outlineColor").oninput = async e => {
+      state.cats[selected].outline = parseInt(e.target.value.slice(1), 16);
+      await render();
+      queueSave();
+    };
+    $("opacity").oninput = async e => {
+      state.cats[selected].opacity = Number(e.target.value);
+      await render();
+      queueSave();
+    };
+    $("displayName").oninput = e => {
+      state.lobby.display_name = e.target.value.replace(/\s+/g, " ").slice(0, 24);
+      queueSave();
+    };
+    $("endpoint").oninput = e => {
+      state.lobby.endpoint = e.target.value;
+      queueSave();
+    };
+    $("roomCode").oninput = e => {
+      state.lobby.room_code = e.target.value.replace(/\D+/g, "").slice(0, 6);
+      $("roomCode").value = state.lobby.room_code;
+      queueSave();
+    };
+    $("addCat").onclick = async () => {
       const base = state.cats[selected] || { body: 0xffffff, outline: 0, opacity: 255 };
       state.cats.push({ ...base });
       selected = state.cats.length - 1;
-      render(); queueSave();
+      await render();
+      queueSave();
     };
-    $("removeCat").onclick = () => {
+    $("removeCat").onclick = async () => {
       if (state.cats.length <= 1) return;
       state.cats.splice(selected, 1);
-      selected = Math.max(0, selected - 1);
-      render(); queueSave();
+      selected = clamp(selected - 1, 0, state.cats.length - 1);
+      await render();
+      queueSave();
     };
-    $("saveNow").onclick = () => save(true);
-    $("createRoom").onclick = async () => { await save(true); await lobbyPost("/api/lobby/create"); };
-    $("joinRoom").onclick = async () => { await save(true); await lobbyPost("/api/lobby/join"); };
-    $("leaveRoom").onclick = async () => { await lobbyPost("/api/lobby/leave"); };
+    $("saveNow").onclick = () => save();
+    $("createRoom").onclick = async () => {
+      await save();
+      await lobbyPost("/api/lobby/create");
+    };
+    $("joinRoom").onclick = async () => {
+      await save();
+      await lobbyPost("/api/lobby/join");
+    };
+    $("leaveRoom").onclick = async () => {
+      await lobbyPost("/api/lobby/leave");
+    };
+
     setInterval(load, 2000);
     load();
   </script>
