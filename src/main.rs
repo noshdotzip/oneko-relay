@@ -108,6 +108,7 @@ static SETTINGS_URL: OnceLock<String> = OnceLock::new();
 static NET_TX: OnceLock<mpsc::UnboundedSender<NetCommand>> = OnceLock::new();
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let cfg = load_config();
     let _ = SHARED.set(Mutex::new(Shared { cfg, selected: 0, lobby: LobbyRuntime::default() }));
     let _ = NET_TX.set(start_network_thread());

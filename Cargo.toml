@@ -11,6 +11,7 @@ tiny_http = "0.12"
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net"] }
 tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 url = "2"
 
 [[bin]]

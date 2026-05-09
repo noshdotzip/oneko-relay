@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_ENDPOINT: &str = "wss://oneko.nosh.zip:8118/";
+pub const DEFAULT_ENDPOINT: &str = "wss://oneko.nosh.zip/";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CatStyle {
