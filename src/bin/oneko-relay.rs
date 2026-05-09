@@ -1,16 +1,28 @@
 use std::{
     collections::HashMap,
     error::Error,
+    io::Cursor,
     net::SocketAddr,
+    pin::Pin,
     sync::{Arc, Mutex},
+    task::{Context, Poll},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use futures_util::{SinkExt, StreamExt};
 use oneko_desktop::protocol::{ClientMessage, PeerSnapshot, ServerMessage};
-use tokio::{net::{TcpListener, TcpStream}, sync::mpsc};
+use tokio::{
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf},
+    net::{TcpListener, TcpStream},
+    sync::mpsc,
+};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
+type AnyError = Box<dyn Error + Send + Sync>;
+
+const HTTP_TEXT: &str = "You cannot access an oneko relay directly. You need the oneko desktop client.";
+const HEADER_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_HEADER_BYTES: usize = 8192;
 const MAX_TEXT_BYTES: usize = 4096;
 const MAX_NAME_LEN: usize = 24;
 const MAX_CATS: usize = 1;
@@ -30,14 +42,14 @@ struct RelayState {
     seq: u64,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), AnyError> {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?
         .block_on(async_main())
 }
 
-async fn async_main() -> Result<(), Box<dyn Error>> {
+async fn async_main() -> Result<(), AnyError> {
     let bind = std::env::var("ONEKO_RELAY_BIND").unwrap_or_else(|_| "0.0.0.0:8118".to_string());
     let listener = TcpListener::bind(&bind).await?;
     let state = Arc::new(Mutex::new(RelayState::default()));
@@ -54,7 +66,32 @@ async fn async_main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-async fn handle(stream: TcpStream, _addr: SocketAddr, state: Arc<Mutex<RelayState>>) -> Result<(), Box<dyn Error>> {
+async fn handle(stream: TcpStream, _addr: SocketAddr, state: Arc<Mutex<RelayState>>) -> Result<(), AnyError> {
+    let mut stream = stream;
+    let head = match tokio::time::timeout(HEADER_TIMEOUT, read_http_head(&mut stream)).await {
+        Ok(Ok(head)) => head,
+        Ok(Err(err)) => {
+            let _ = http_response(&mut stream, "400 Bad Request", "text/plain; charset=utf-8", "Bad Request").await;
+            return Err(err);
+        }
+        Err(_) => {
+            let _ = http_response(&mut stream, "408 Request Timeout", "text/plain; charset=utf-8", "Request Timeout").await;
+            return Ok(());
+        }
+    };
+
+    if !is_websocket_upgrade(&head) {
+        http_response(&mut stream, "200 OK", "text/plain; charset=utf-8", HTTP_TEXT).await?;
+        return Ok(());
+    }
+
+    handle_ws(PrefixedStream::new(head, stream), state).await
+}
+
+async fn handle_ws<S>(stream: S, state: Arc<Mutex<RelayState>>) -> Result<(), AnyError>
+where
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
     let ws = accept_async(stream).await?;
     let (mut write, mut read) = ws.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<ServerMessage>();
@@ -237,6 +274,102 @@ async fn handle(stream: TcpStream, _addr: SocketAddr, state: Arc<Mutex<RelayStat
     cleanup(&state, &room_code, &client_id);
     broadcast(&state, &room_code, None);
     writer.abort();
+    Ok(())
+}
+
+struct PrefixedStream {
+    prefix: Cursor<Vec<u8>>,
+    stream: TcpStream,
+}
+
+impl PrefixedStream {
+    fn new(prefix: Vec<u8>, stream: TcpStream) -> Self {
+        Self { prefix: Cursor::new(prefix), stream }
+    }
+}
+
+impl AsyncRead for PrefixedStream {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
+        let pos = self.prefix.position() as usize;
+        let prefix = self.prefix.get_ref();
+        if pos < prefix.len() {
+            let n = (prefix.len() - pos).min(buf.remaining());
+            buf.put_slice(&prefix[pos..pos + n]);
+            self.prefix.set_position((pos + n) as u64);
+            return Poll::Ready(Ok(()));
+        }
+        Pin::new(&mut self.stream).poll_read(cx, buf)
+    }
+}
+
+impl AsyncWrite for PrefixedStream {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, data: &[u8]) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.stream).poll_write(cx, data)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.stream).poll_flush(cx)
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.stream).poll_shutdown(cx)
+    }
+}
+
+async fn read_http_head(stream: &mut TcpStream) -> Result<Vec<u8>, AnyError> {
+    let mut head = Vec::with_capacity(1024);
+    let mut buf = [0u8; 1024];
+    loop {
+        let n = stream.read(&mut buf).await?;
+        if n == 0 {
+            return Err("connection closed before request headers".into());
+        }
+        head.extend_from_slice(&buf[..n]);
+        if head.windows(4).any(|w| w == b"\r\n\r\n") {
+            return Ok(head);
+        }
+        if head.len() > MAX_HEADER_BYTES {
+            return Err("request headers too large".into());
+        }
+    }
+}
+
+fn is_websocket_upgrade(head: &[u8]) -> bool {
+    let request = String::from_utf8_lossy(head).to_ascii_lowercase();
+    let mut lines = request.lines();
+    let is_get = lines.next().is_some_and(|line| line.starts_with("get "));
+    let mut has_upgrade = false;
+    let mut has_connection_upgrade = false;
+    let mut has_key = false;
+    let mut has_version = false;
+
+    for line in lines {
+        let Some((name, value)) = line.split_once(':') else { continue };
+        let value = value.trim();
+        match name.trim() {
+            "upgrade" => has_upgrade = value == "websocket",
+            "connection" => has_connection_upgrade = value.split(',').any(|part| part.trim() == "upgrade"),
+            "sec-websocket-key" => has_key = !value.is_empty(),
+            "sec-websocket-version" => has_version = value == "13",
+            _ => {}
+        }
+    }
+
+    is_get && has_upgrade && has_connection_upgrade && has_key && has_version
+}
+
+async fn http_response(
+    stream: &mut TcpStream,
+    status: &str,
+    content_type: &str,
+    body: &str,
+) -> Result<(), AnyError> {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Length: {}\r\nContent-Type: {content_type}\r\nConnection: close\r\n\r\n{body}",
+        body.as_bytes().len()
+    );
+    stream.write_all(response.as_bytes()).await?;
+    let _ = stream.shutdown().await;
     Ok(())
 }
 
